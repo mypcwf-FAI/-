@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全球月供模擬系統 | AI 自動判市版</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --iron: #546e7a; --grain: #7cb342; --armor: #6d4c41; --light: #fb8c00; --elite: #1e88e5; --bg: #f5f7fa; }
+        body { font-family: 'PingFang HK', sans-serif; margin: 0; background: var(--bg); color: #333; }
+        
+        .disclaimer { background: #fff3cd; color: #856404; padding: 10px; text-align: center; font-size: 13px; font-weight: bold; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #ffeeba; }
+        
+        .hero { 
+            position: relative; height: 350px; 
+            background: #2c3e50 url('image.jpg') center/cover no-repeat; 
+            display: flex; align-items: center; justify-content: center; color: white;
+        }
+        .hero-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .hero-content { z-index: 10; text-align: center; }
+
+        .main-container { max-width: 1100px; margin: -50px auto 60px; display: grid; grid-template-columns: 1fr 1.6fr; gap: 20px; padding: 0 20px; position: relative; z-index: 20; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+
+        /* 情報官樣式 */
+        .ai-scanner { background: #1a1a1a; color: #00ff00; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 13px; margin-bottom: 20px; border-left: 4px solid #00ff00; }
+        .scanning-text::after { content: '...'; animation: blink 1.5s infinite; }
+        @keyframes blink { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+
+        label { display: block; margin: 15px 0 5px; font-weight: bold; font-size: 14px; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; margin-bottom: 10px; }
+        .btn-action { width: 100%; padding: 18px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        
+        #result-area { display: none; }
+        .battle-mode-box { background: #e8f4fd; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #b8daff; }
+        .army-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .army-item { padding: 12px; border-radius: 6px; border: 1px solid #eee; background: #fafafa; }
+
+        footer { background: #222; color: #888; padding: 30px; text-align: center; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="disclaimer">🚨 教育示範：本系統採用模擬判市邏輯，數據與判斷僅供教學參考，非真實投資建議。</div>
+
+<div class="hero">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+        <h1>全球月供投資模擬系統</h1>
+        <div style="font-style: italic; opacity: 0.9;">「濕雪、長坡、判市、變陣」</div>
+    </div>
+</div>
+
+<div class="main-container">
+    <div class="card">
+        <div class="ai-scanner">
+            <div>[系統狀態] 情報官連線中...</div>
+            <div id="status-line" class="scanning-text">正在掃描全球宏觀指標</div>
+        </div>
+        
+        <h3>參數設定</h3>
+        <label>你的年齡</label>
+        <input type="number" id="age" value="30">
+        
+        <label>每月模擬定投 (HKD)</label>
+        <input type="number" id="budget" value="10000">
+        
+        <label>核心目標</label>
+        <select id="goal">
+            <option value="aggressive">資產爆發 (尋找長坡道)</option>
+            <option value="balanced">穩健增長 (雪球平衡感)</option>
+            <option value="income">高現金流 (以息養戰)</option>
+        </select>
+        
+        <button class="btn-action" onclick="autoAnalyze()">啟動 AI 自動判市變陣</button>
+    </div>
+
+    <div class="card" id="result-area">
+        <div class="battle-mode-box">
+            <h4 style="margin:0; color:#0056b3;">📡 AI 情報官：當下戰場判定</h4>
+            <div id="detected-env" style="font-weight:bold; font-size:18px; margin:10px 0; color:#d63031;"></div>
+            <p id="env-logic" style="font-size:13px; color:#555; margin:0;"></p>
+        </div>
+
+        <canvas id="armyChart" height="120"></canvas>
+        
+        <div class="army-list" id="armyList"></div>
+
+        <div style="margin-top:20px; padding:15px; background:#f8f9fa; border-radius:8px; font-size:13px;">
+            <strong>🔄 3年後自動化邏輯：</strong>
+            <span id="auto-step"></span>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <div style="max-width:800px; margin:auto;">
+        本平台所有標示、邏輯均為財經教育內容，旨在示範「兵種與戰場」對應關係。歐美市場存在風險，請獨立判斷。
+    </div>
+</footer>
+
+<script>
+let myChart = null;
+
+// 王牌課程判市邏輯數據庫 (模擬)
+function getMarketSignals() {
+    // 這裡模擬從 API 抓取的數據
+    const cpi = 3.2; // 通膨率
+    const rates = 5.25; // 利率水平
+    const ai_index = 85; // AI 產業熱度 (0-100)
+    const yield_curve = -0.5; // 殖利率曲線 (負數代表倒掛/衰退風險)
+    
+    if (ai_index > 80 && cpi < 4) return "AI_BOOM";
+    if (cpi > 4.5) return "INFLATION";
+    if (yield_curve < 0) return "RECESSION";
+    return "STABLE";
+}
+
+function autoAnalyze() {
+    const budget = parseInt(document.getElementById('budget').value);
+    const goal = document.getElementById('goal').value;
+    const env = getMarketSignals();
+    
+    document.getElementById('result-area').style.display = 'block';
+    
+    let envName = "", envLogic = "", config = [], step = "";
+
+    // 變陣邏輯核心
+    switch(env) {
+        case "AI_BOOM":
+            envName = "⚡ AI 科技盛世 (算力與電力需求爆發)";
+            envLogic = "邏輯：AI 發展導致電力缺口，輕騎突擊(GRID)與精銳步卒(QQQ)正處於濕雪核心。";
+            config = [ {n:'精銳步卒', p:40, c:'#1e88e5'}, {n:'輕騎突擊', p:30, c:'#fb8c00'}, {n:'鐵盾軍', p:15, c:'#546e7a'}, {n:'糧草營', p:15, c:'#7cb342'} ];
+            step = "待 AI 標的估值進入超買區，將輕騎兵之月供利潤自動轉向重甲軍守城。";
+            break;
+        case "INFLATION":
+            envName = "🔥 炎熱通膨 (物價飛漲、利率維持高位)";
+            envLogic = "邏輯：通膨侵蝕資產，重甲騎(XOM)具備天然抗性，糧草營提供穩定補給。";
+            config = [ {n:'重甲騎', p:45, c:'#6d4c41'}, {n:'糧草營', p:25, c:'#7cb342'}, {n:'鐵盾軍', p:20, c:'#546e7a'}, {n:'精銳步卒', p:10, c:'#1e88e5'} ];
+            step = "通膨降至3%以下時，模擬將重甲騎資金調撥回精銳步卒。";
+            break;
+        case "RECESSION":
+            envName = "⛈️ 雷雨衰退 (經濟放緩、防禦至上)";
+            envLogic = "邏輯：戰場能見度低，鐵盾軍(SCHD)與糧草營(XLU)組成防護牆，等待降息雨露。";
+            config = [ {n:'鐵盾軍', p:40, c:'#546e7a'}, {n:'糧草營', p:40, c:'#7cb342'}, {n:'精銳步卒', p:20, c:'#1e88e5'} ];
+            step = "降息週期確認後，釋放鐵盾軍資金重新強攻精銳步卒。";
+            break;
+        default:
+            envName = "🌈 太平盛世 (穩步增長環境)";
+            envLogic = "邏輯：全軍均衡，利用歐美標的長期向上基因，實現複利滾動。";
+            config = [ {n:'精銳步卒', p:25, c:'#1e88e5'}, {n:'鐵盾軍', p:25, c:'#546e7a'}, {n:'重甲騎', p:25, c:'#6d4c41'}, {n:'糧草營', p:25, c:'#7cb342'} ];
+            step = "按計劃維持均衡月供，每半年執行一次再平衡示範。";
+    }
+
+    // 更新顯示
+    document.getElementById('detected-env').innerText = envName;
+    document.getElementById('env-logic').innerText = envLogic;
+    document.getElementById('auto-step').innerText = step;
+
+    let html = "";
+    config.forEach(c => {
+        const amt = Math.round(budget * c.p / 100);
+        html += `<div class="army-item"><strong>${c.n}</strong><br>$${amt} (${c.p}%)</div>`;
+    });
+    document.getElementById('armyList').innerHTML = html;
+
+    // 圖表
+    const ctx = document.getElementById('armyChart').getContext('2d');
+    if (myChart) myChart.destroy();
+    myChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: config.map(c => c.n),
+            datasets: [{ data: config.map(c => c.p), backgroundColor: config.map(c => c.c) }]
+        },
+        options: { plugins: { legend: { position: 'right' } } }
+    });
+}
+</script>
+</body>
+</html>
