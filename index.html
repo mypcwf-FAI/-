@@ -3,178 +3,237 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全球月供模擬系統 | AI 自動判市版</title>
+    <title>全球月供模擬系統 | 輝仔戰略指揮官</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --iron: #546e7a; --grain: #7cb342; --armor: #6d4c41; --light: #fb8c00; --elite: #1e88e5; --bg: #f5f7fa; }
-        body { font-family: 'PingFang HK', sans-serif; margin: 0; background: var(--bg); color: #333; }
+        :root { 
+            --primary: #007bff; --qi-red: #e74c3c; --zheng-green: #2ecc71; 
+            --dark-bg: #121212; --card-shadow: 0 8px 30px rgba(0,0,0,0.12); 
+        }
+        * { box-sizing: border-box; }
+        body { font-family: 'PingFang HK', 'Microsoft JhengHei', sans-serif; margin: 0; background: #f0f2f5; color: #333; overflow-x: hidden; }
         
-        .disclaimer { background: #fff3cd; color: #856404; padding: 10px; text-align: center; font-size: 13px; font-weight: bold; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #ffeeba; }
-        
+        /* 頁首英雄區 */
         .hero { 
-            position: relative; height: 350px; 
+            position: relative; height: 320px; 
             background: #2c3e50 url('image.jpg') center/cover no-repeat; 
             display: flex; align-items: center; justify-content: center; color: white;
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.5);
         }
-        .hero-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
-        .hero-content { z-index: 10; text-align: center; }
+        .hero-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.4); }
+        .hero-content { z-index: 10; text-align: center; padding: 0 20px; }
+        .hero-content h1 { font-size: 32px; margin: 0; letter-spacing: 1px; }
+        .quote { font-style: italic; margin-top: 10px; font-size: 1.1rem; opacity: 0.9; }
 
-        .main-container { max-width: 1100px; margin: -50px auto 60px; display: grid; grid-template-columns: 1fr 1.6fr; gap: 20px; padding: 0 20px; position: relative; z-index: 20; }
-        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-
-        /* 情報官樣式 */
-        .ai-scanner { background: #1a1a1a; color: #00ff00; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 13px; margin-bottom: 20px; border-left: 4px solid #00ff00; }
-        .scanning-text::after { content: '...'; animation: blink 1.5s infinite; }
-        @keyframes blink { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
-
-        label { display: block; margin: 15px 0 5px; font-weight: bold; font-size: 14px; }
-        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; margin-bottom: 10px; }
-        .btn-action { width: 100%; padding: 18px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        /* 主容器佈局 */
+        .container { max-width: 1200px; margin: -40px auto 60px; display: grid; grid-template-columns: 1fr 2.2fr; gap: 20px; padding: 0 20px; }
         
-        #result-area { display: none; }
-        .battle-mode-box { background: #e8f4fd; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #b8daff; }
-        .army-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .army-item { padding: 12px; border-radius: 6px; border: 1px solid #eee; background: #fafafa; }
+        .card { background: white; padding: 25px; border-radius: 16px; box-shadow: var(--card-shadow); height: fit-content; }
 
-        footer { background: #222; color: #888; padding: 30px; text-align: center; font-size: 12px; }
+        /* AI 掃描區 - 解決溢出問題 */
+        .ai-scanner { 
+            background: var(--dark-bg); color: #00ff00; padding: 15px; border-radius: 10px; 
+            font-family: 'Courier New', monospace; font-size: 12px; margin-bottom: 20px; 
+            border-left: 4px solid #00ff00; line-height: 1.5; overflow: hidden;
+        }
+        .scan-line { border-bottom: 1px solid #222; padding: 4px 0; white-space: normal; word-break: break-all; }
+
+        /* 表單樣式 */
+        .form-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 6px; font-weight: bold; font-size: 14px; color: #555; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; background: #fff; }
+        .btn-trigger { 
+            width: 100%; padding: 16px; background: var(--primary); color: white; border: none; 
+            border-radius: 10px; font-size: 18px; font-weight: 800; cursor: pointer; transition: 0.3s;
+        }
+        .btn-trigger:hover { background: #0056b3; transform: scale(1.02); }
+
+        /* 結果展示區 */
+        #result-area { display: none; animation: fadeIn 0.6s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .env-header { background: #fff8e1; border-left: 6px solid #ffc107; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        
+        /* 解決排版阻礙：左右佈局優化 */
+        .result-main { display: flex; flex-wrap: wrap; gap: 25px; align-items: flex-start; }
+        .chart-box { flex: 1; min-width: 280px; max-width: 400px; padding: 10px; }
+        .table-box { flex: 2; min-width: 320px; }
+
+        .army-table { width: 100%; border-collapse: collapse; background: white; font-size: 14px; }
+        .army-table th { background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #eee; }
+        .army-table td { padding: 12px; border-bottom: 1px solid #f0f0f0; }
+
+        .tag { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; margin-right: 5px; }
+        .tag-qi { background: var(--qi-red); }
+        .tag-zheng { background: var(--zheng-green); }
+
+        footer { text-align: center; padding: 40px; color: #888; font-size: 13px; }
+
+        @media (max-width: 1000px) {
+            .container { grid-template-columns: 1fr; }
+            .hero { height: 260px; }
+        }
     </style>
 </head>
 <body>
-
-<div class="disclaimer">🚨 教育示範：本系統採用模擬判市邏輯，數據與判斷僅供教學參考，非真實投資建議。</div>
 
 <div class="hero">
     <div class="hero-overlay"></div>
     <div class="hero-content">
         <h1>全球月供投資模擬系統</h1>
-        <div style="font-style: italic; opacity: 0.9;">「濕雪、長坡、判市、變陣」</div>
+        <div class="quote">「人生就像滾雪球，你只要找到濕的雪，和很長的坡道。」</div>
     </div>
 </div>
 
-<div class="main-container">
+<div class="container">
     <div class="card">
-        <div class="ai-scanner">
-            <div>[系統狀態] 情報官連線中...</div>
-            <div id="status-line" class="scanning-text">正在掃描全球宏觀指標</div>
+        <div class="ai-scanner" id="scanner">
+            <div class="scan-line">[指令] 已載入：正兵四部、奇兵四部</div>
+            <div class="scan-line">[認證] 王牌課程核心邏輯驗證通過</div>
+            <div id="dynamic-status" class="scan-line">待命：請輸入參數並啟動變陣</div>
         </div>
-        
-        <h3>參數設定</h3>
-        <label>你的年齡</label>
-        <input type="number" id="age" value="30">
-        
-        <label>每月模擬定投 (HKD)</label>
-        <input type="number" id="budget" value="10000">
-        
-        <label>核心目標</label>
-        <select id="goal">
-            <option value="aggressive">資產爆發 (尋找長坡道)</option>
-            <option value="balanced">穩健增長 (雪球平衡感)</option>
-            <option value="income">高現金流 (以息養戰)</option>
-        </select>
-        
-        <button class="btn-action" onclick="autoAnalyze()">啟動 AI 自動判市變陣</button>
+
+        <div class="form-group">
+            <label>你的年齡 (影響防禦厚度)</label>
+            <input type="number" id="age" value="42">
+        </div>
+        <div class="form-group">
+            <label>每月模擬定投 (HKD)</label>
+            <input type="number" id="budget" value="10000">
+        </div>
+        <div class="form-group">
+            <label>核心目標 (決定用兵風格)</label>
+            <select id="goal">
+                <option value="aggressive">資產爆發 (重用連弩/精銳)</option>
+                <option value="balanced">穩健增長 (長槍/鐵盾平衡)</option>
+                <option value="income">高現金流 (重甲/糧草為主)</option>
+            </select>
+        </div>
+        <button class="btn-trigger" onclick="runCommand()">啟動 AI 自動判市變陣</button>
     </div>
 
     <div class="card" id="result-area">
-        <div class="battle-mode-box">
-            <h4 style="margin:0; color:#0056b3;">📡 AI 情報官：當下戰場判定</h4>
-            <div id="detected-env" style="font-weight:bold; font-size:18px; margin:10px 0; color:#d63031;"></div>
-            <p id="env-logic" style="font-size:13px; color:#555; margin:0;"></p>
+        <div class="env-header">
+            <h3 id="env-title" style="margin:0; color:#b8860b;">偵測中...</h3>
+            <p id="env-desc" style="margin:8px 0 0; font-size:14px; color:#5d4037;"></p>
         </div>
 
-        <canvas id="armyChart" height="120"></canvas>
-        
-        <div class="army-list" id="armyList"></div>
+        <div class="result-main">
+            <div class="chart-box">
+                <canvas id="battleChart"></canvas>
+            </div>
+            <div class="table-box">
+                <table class="army-table">
+                    <thead>
+                        <tr>
+                            <th>軍團兵種</th>
+                            <th>推薦標的</th>
+                            <th>配置%</th>
+                            <th>月投金額</th>
+                        </tr>
+                    </thead>
+                    <tbody id="army-tbody"></tbody>
+                </table>
+            </div>
+        </div>
 
-        <div style="margin-top:20px; padding:15px; background:#f8f9fa; border-radius:8px; font-size:13px;">
-            <strong>🔄 3年後自動化邏輯：</strong>
-            <span id="auto-step"></span>
+        <div style="margin-top:25px; padding:15px; background:#f1f8e9; border-radius:10px; border:1px solid #dcedc8;">
+            <h4 style="margin:0 0 8px 0; color:#33691e;">📜 戰略鐵則回傳</h4>
+            <p id="strategy-rule" style="margin:0; font-size:13px; color:#555; line-height:1.6;"></p>
         </div>
     </div>
 </div>
 
 <footer>
-    <div style="max-width:800px; margin:auto;">
-        本平台所有標示、邏輯均為財經教育內容，旨在示範「兵種與戰場」對應關係。歐美市場存在風險，請獨立判斷。
-    </div>
+    輝仔 2026 | 投資涉及風險，配兵僅供參考
 </footer>
 
 <script>
-let myChart = null;
+let chartObj = null;
 
-// 王牌課程判市邏輯數據庫 (模擬)
-function getMarketSignals() {
-    // 這裡模擬從 API 抓取的數據
-    const cpi = 3.2; // 通膨率
-    const rates = 5.25; // 利率水平
-    const ai_index = 85; // AI 產業熱度 (0-100)
-    const yield_curve = -0.5; // 殖利率曲線 (負數代表倒掛/衰退風險)
-    
-    if (ai_index > 80 && cpi < 4) return "AI_BOOM";
-    if (cpi > 4.5) return "INFLATION";
-    if (yield_curve < 0) return "RECESSION";
-    return "STABLE";
-}
+// 軍火庫數據定義
+const armory = {
+    qi: {
+        aggressive: [ {n:'連弩兵', s:'QQQ/GRID', d:'AI與科技爆發力'}, {n:'精銳步卒', s:'MSFT/NVDA', d:'行業壟斷龍頭'} ],
+        balanced: [ {n:'遊騎兵', s:'CWB/HYG', d:'進可攻退可守'}, {n:'精銳步卒', s:'AAPL/ASML', d:'穩健成長核心'} ],
+        income: [ {n:'遊騎兵', s:'HYG', d:'高息債基增強'} ]
+    },
+    zheng: {
+        aggressive: [ {n:'重戟兵', s:'SCHD', d:'高股息價值底倉'} ],
+        balanced: [ {n:'長槍兵', s:'XOM/CVX', d:'抗通脹能源'}, {n:'鐵盾兵', s:'AGG/BND', d:'無風險壓倉'} ],
+        income: [ {n:'重甲騎', s:'O/PSA', d:'月月收租'}, {n:'糧草營', s:'POWR/XLU', d:'基建剛需現金流'} ]
+    }
+};
 
-function autoAnalyze() {
+function runCommand() {
+    const age = parseInt(document.getElementById('age').value);
     const budget = parseInt(document.getElementById('budget').value);
     const goal = document.getElementById('goal').value;
-    const env = getMarketSignals();
+
+    // 1. 自動判市 (模擬牛熊布局：目前判定為 牛市2: 主升擴張階段)
+    const market = {
+        name: "🐮 牛市 2：主升擴張階段",
+        rule: "正奇平衡、穩中求勝。正奇各 5 成，靠正兵股息滾倉，奇兵把握波段機會。",
+        baseQi: 50,
+        baseZheng: 50
+    };
+
+    // 2. 目標與年齡加權修正
+    let finalZheng = market.baseZheng;
+    if (goal === 'income') finalZheng += 15;
+    if (goal === 'aggressive') finalZheng -= 10;
     
+    // 年齡補償：每過40歲，正兵防禦+1%
+    const ageFactor = Math.max(0, (age - 40) * 1);
+    finalZheng = Math.min(95, finalZheng + ageFactor);
+    let finalQi = 100 - finalZheng;
+
+    // 3. 兵種選擇連動
+    let selectedTroops = [];
+    const qiSelection = armory.qi[goal];
+    const zhengSelection = armory.zheng[goal];
+
+    // 分配奇兵子項
+    qiSelection.forEach(t => {
+        selectedTroops.push({ ...t, type: 'qi', p: (finalQi / qiSelection.length).toFixed(1), c: '#e74c3c' });
+    });
+    // 分配正兵子項
+    zhengSelection.forEach(t => {
+        selectedTroops.push({ ...t, type: 'zheng', p: (finalZheng / zhengSelection.length).toFixed(1), c: '#2ecc71' });
+    });
+
+    // 4. 更新 UI
     document.getElementById('result-area').style.display = 'block';
-    
-    let envName = "", envLogic = "", config = [], step = "";
-
-    // 變陣邏輯核心
-    switch(env) {
-        case "AI_BOOM":
-            envName = "⚡ AI 科技盛世 (算力與電力需求爆發)";
-            envLogic = "邏輯：AI 發展導致電力缺口，輕騎突擊(GRID)與精銳步卒(QQQ)正處於濕雪核心。";
-            config = [ {n:'精銳步卒', p:40, c:'#1e88e5'}, {n:'輕騎突擊', p:30, c:'#fb8c00'}, {n:'鐵盾軍', p:15, c:'#546e7a'}, {n:'糧草營', p:15, c:'#7cb342'} ];
-            step = "待 AI 標的估值進入超買區，將輕騎兵之月供利潤自動轉向重甲軍守城。";
-            break;
-        case "INFLATION":
-            envName = "🔥 炎熱通膨 (物價飛漲、利率維持高位)";
-            envLogic = "邏輯：通膨侵蝕資產，重甲騎(XOM)具備天然抗性，糧草營提供穩定補給。";
-            config = [ {n:'重甲騎', p:45, c:'#6d4c41'}, {n:'糧草營', p:25, c:'#7cb342'}, {n:'鐵盾軍', p:20, c:'#546e7a'}, {n:'精銳步卒', p:10, c:'#1e88e5'} ];
-            step = "通膨降至3%以下時，模擬將重甲騎資金調撥回精銳步卒。";
-            break;
-        case "RECESSION":
-            envName = "⛈️ 雷雨衰退 (經濟放緩、防禦至上)";
-            envLogic = "邏輯：戰場能見度低，鐵盾軍(SCHD)與糧草營(XLU)組成防護牆，等待降息雨露。";
-            config = [ {n:'鐵盾軍', p:40, c:'#546e7a'}, {n:'糧草營', p:40, c:'#7cb342'}, {n:'精銳步卒', p:20, c:'#1e88e5'} ];
-            step = "降息週期確認後，釋放鐵盾軍資金重新強攻精銳步卒。";
-            break;
-        default:
-            envName = "🌈 太平盛世 (穩步增長環境)";
-            envLogic = "邏輯：全軍均衡，利用歐美標的長期向上基因，實現複利滾動。";
-            config = [ {n:'精銳步卒', p:25, c:'#1e88e5'}, {n:'鐵盾軍', p:25, c:'#546e7a'}, {n:'重甲騎', p:25, c:'#6d4c41'}, {n:'糧草營', p:25, c:'#7cb342'} ];
-            step = "按計劃維持均衡月供，每半年執行一次再平衡示範。";
-    }
-
-    // 更新顯示
-    document.getElementById('detected-env').innerText = envName;
-    document.getElementById('env-logic').innerText = envLogic;
-    document.getElementById('auto-step').innerText = step;
+    document.getElementById('env-title').innerText = market.name;
+    document.getElementById('env-desc').innerText = `目前戰略：${market.rule}`;
+    document.getElementById('strategy-rule').innerText = `指揮官建議：針對您 ${age} 歲的資產屬性，已將正兵比例優化至 ${finalZheng}%，確保雪球坡道穩固。`;
+    document.getElementById('dynamic-status').innerText = `[成功] 已根據「${document.getElementById('goal').selectedOptions[0].text}」目標重新排兵。`;
 
     let html = "";
-    config.forEach(c => {
-        const amt = Math.round(budget * c.p / 100);
-        html += `<div class="army-item"><strong>${c.n}</strong><br>$${amt} (${c.p}%)</div>`;
+    selectedTroops.forEach(t => {
+        const amt = Math.round(budget * t.p / 100);
+        html += `<tr>
+            <td><span class="tag ${t.type==='qi'?'tag-qi':'tag-zheng'}">${t.type==='qi'?'奇':'正'}</span>${t.n}</td>
+            <td><small>${t.s}</small></td>
+            <td>${t.p}%</td>
+            <td><b>$${amt}</b></td>
+        </tr>`;
     });
-    document.getElementById('armyList').innerHTML = html;
+    document.getElementById('army-tbody').innerHTML = html;
 
-    // 圖表
-    const ctx = document.getElementById('armyChart').getContext('2d');
-    if (myChart) myChart.destroy();
-    myChart = new Chart(ctx, {
-        type: 'pie',
+    // 5. 更新圖表
+    const ctx = document.getElementById('battleChart').getContext('2d');
+    if (chartObj) chartObj.destroy();
+    chartObj = new Chart(ctx, {
+        type: 'doughnut',
         data: {
-            labels: config.map(c => c.n),
-            datasets: [{ data: config.map(c => c.p), backgroundColor: config.map(c => c.c) }]
+            labels: selectedTroops.map(t => t.n),
+            datasets: [{ data: selectedTroops.map(t => t.p), backgroundColor: selectedTroops.map(t => t.c), borderWidth: 2, borderColor: '#fff' }]
         },
-        options: { plugins: { legend: { position: 'right' } } }
+        options: { cutout: '65%', plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: true }
     });
+
+    window.scrollTo({ top: document.getElementById('result-area').offsetTop - 20, behavior: 'smooth' });
 }
 </script>
 </body>
